@@ -2,103 +2,190 @@
 
 namespace app\models;
 
-class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
+use Yii;
+
+use yii\base\{Exception, InvalidConfigException};
+use yii\behaviors\TimestampBehavior;
+use yii\db\{ActiveQuery, ActiveRecord, Expression};
+use yii\web\IdentityInterface;
+
+use app\models\auth\{AuthAssignment, AuthItem};
+
+/**
+ * This is the model class for table "{{%users}}".
+ *
+ * @property int $id                              ID
+ * @property string $ip_address                   IP Address at registration
+ * @property string $name                         Login (username)
+ * @property string $email                        Email address
+ * @property string|null $phone                   Telephone number
+ * @property string|null $firstName               First name
+ * @property string|null $lastName                Last name
+ * @property string|null $password                Password
+ * @property string|null $forgotten_password_code Forgotten password code
+ * @property string|null $auth_key                Auth key
+ * @property string $created_at                   Created at
+ * @property string|null $updated_at              Updated at
+ * @property string|null $last_activity           Last activity
+ * @property string|null $deleted_at              Deleted at
+ */
+class User extends ActiveRecord implements IdentityInterface
 {
-    public $id;
-    public $username;
-    public $password;
-    public $authKey;
-    public $accessToken;
-
-    private static $users = [
-        '100' => [
-            'id' => '100',
-            'username' => 'admin',
-            'password' => 'admin',
-            'authKey' => 'test100key',
-            'accessToken' => '100-token',
-        ],
-        '101' => [
-            'id' => '101',
-            'username' => 'demo',
-            'password' => 'demo',
-            'authKey' => 'test101key',
-            'accessToken' => '101-token',
-        ],
-    ];
-
-
     /**
-     * {@inheritdoc}
+     * @return array[]
      */
-    public static function findIdentity($id)
+    public function behaviors(): array
     {
-        return isset(self::$users[$id]) ? new static(self::$users[$id]) : null;
+        return [
+            [
+                'class' => TimestampBehavior::class,
+                'attributes' => [
+                    self::EVENT_BEFORE_INSERT => ['created_at', 'updated_at', 'last_activity'],
+                    self::EVENT_BEFORE_UPDATE => ['updated_at'],
+                    self::EVENT_AFTER_REFRESH => ['last_activity'],
+                ],
+                'value' => new Expression('NOW()')
+            ],
+        ];
     }
 
     /**
-     * {@inheritdoc}
+     * @return string
      */
-    public static function findIdentityByAccessToken($token, $type = null)
+    public static function tableName(): string
     {
-        foreach (self::$users as $user) {
-            if ($user['accessToken'] === $token) {
-                return new static($user);
-            }
-        }
-
-        return null;
+        return '{{%users}}';
     }
 
     /**
-     * Finds user by username
+     * @return array
+     */
+    public function rules(): array
+    {
+        return [
+            [['ip_address', 'name', 'email', 'created_at'], 'required'],
+            [['created_at', 'updated_at', 'last_activity', 'deleted_at'], 'safe'],
+            [['ip_address'], 'string', 'max' => 45],
+            [['name', 'phone', 'first_name', 'last_name'], 'string', 'max' => 20],
+            [['email'], 'string', 'max' => 100],
+            [['password', 'forgotten_password_code'], 'string', 'max' => 255],
+            [['auth_key'], 'string', 'max' => 32]
+        ];
+    }
+
+    /**
+     * @return string[]
+     */
+    public function attributeLabels(): array
+    {
+        return [
+            'id'                      => 'ID',
+            'ip_address'              => 'IP Address at registration',
+            'name'                    => 'Login (username)',
+            'email'                   => 'Email address',
+            'phone'                   => 'Telephone number',
+            'first_name'              => 'First name',
+            'last_name'               => 'Last name',
+            'password'                => 'Password',
+            'forgotten_password_code' => 'Forgotten password code',
+            'auth_key'                => 'Auth key',
+            'created_at'              => 'Created at',
+            'updated_at'              => 'Updated at',
+            'last_activity'           => 'Last activity',
+            'deleted_at'              => 'Deleted at'
+        ];
+    }
+
+    /**
+     * @param int|string $id
+     * @return User|IdentityInterface|null
+     */
+    public static function findIdentity($id): User | IdentityInterface | null
+    {
+        return static::findOne($id);
+    }
+
+    /**
+     * @param mixed $token
+     * @param mixed $type
+     * @return User|IdentityInterface|null
+     */
+    public static function findIdentityByAccessToken($token, $type = null): User | IdentityInterface | null
+    {
+        return static::findOne(['access_token' => $token]);
+    }
+
+    /**
+     * Finds user by username (customize email).
      *
      * @param string $username
-     * @return static|null
+     * @return User|null
      */
-    public static function findByUsername($username)
+    public static function findByUsername(string $username): ?User
     {
-        foreach (self::$users as $user) {
-            if (strcasecmp($user['username'], $username) === 0) {
-                return new static($user);
-            }
-        }
-
-        return null;
+        return static::findOne(['email' => $username]);
     }
 
     /**
-     * {@inheritdoc}
+     * @return int|string
      */
-    public function getId()
+    public function getId(): int | string
     {
         return $this->id;
     }
 
     /**
-     * {@inheritdoc}
+     * @return string|null
      */
-    public function getAuthKey()
+    public function getAuthKey(): ?string
     {
-        return $this->authKey;
+        return $this->auth_key;
     }
 
     /**
-     * {@inheritdoc}
+     * @param string $authKey
+     * @return bool
      */
-    public function validateAuthKey($authKey)
+    public function validateAuthKey($authKey): bool
     {
-        return $this->authKey === $authKey;
+        return $this->auth_key === $authKey;
     }
 
     /**
-     * Validates password
+     * Validates password.
      *
      * @param string $password password to validate
-     * @return bool if password provided is valid for current user
+     * @return boolean if password provided is valid for current user
      */
-    public function validatePassword($password)
+    public function validatePassword(string $password): bool
     {
-        return $this->password === $password;
+        return Yii::$app->security->validatePassword($password, $this->password);
+    }
+
+    /**
+     * @return void
+     * @throws Exception
+     */
+    public function generateAuthKey(): void
+    {
+        $this->auth_key = Yii::$app->security->generateRandomString();
+    }
+
+    /**
+     * @return ActiveQuery
+     */
+    public function getAuthAssignment(): ActiveQuery
+    {
+        return $this->hasOne(AuthAssignment::class, ['user_id' => 'id']);
+    }
+
+    /**
+     * @return ActiveQuery
+     * @throws InvalidConfigException
+     */
+    public function getItemNames(): ActiveQuery
+    {
+        return $this->hasMany(AuthItem::class, ['name' => 'item_name'])
+            ->viaTable('auth_assignment', ['user_id' => 'id']);
     }
 }

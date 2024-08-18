@@ -26,15 +26,51 @@ $config = [
             ],
         ],
         'db' => $db,
-    ],
-    'params' => $params,
-    /*
-    'controllerMap' => [
-        'fixture' => [ // Fixture generation command line.
-            'class' => 'yii\faker\FixtureController',
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
         ],
     ],
-    */
+    'params' => $params,
+    'controllerMap' => [
+//        'fixture' => [ // Fixture generation command line.
+//            'class' => 'yii\faker\FixtureController',
+//        ],
+        'seeder' => [
+            'class' => \diecoding\seeder\SeederController::class,
+
+
+            /** @var string the default command action. */
+//            'defaultAction' => 'seed',
+
+            /** @var string seeder path, support path alias */
+            'seederPath' => 'seeders',
+
+            /** @var string seeder namespace */
+            'seederNamespace' => 'app\seeders',
+
+            /**
+             * @var string this class look like `$this->seederNamespace\Seeder`
+             * default seeder class run if no class selected,
+             * must instance of `\diecoding\seeder\TableSeeder`
+             */
+//            'defaultSeederClass' => 'Seeder',
+
+            /** @var string tables path, support path alias */
+            'tablesPath' => 'seeders',
+
+            /** @var string seeder table namespace */
+            'tableSeederNamespace' => 'app\seeders',
+
+            /** @var string model namespace */
+            'modelNamespace' => 'app\models',
+
+            /** @var string path view template table seeder, support path alias */
+            'templateSeederFile' => '@vendor/diecoding/yii2-seeder/src/views/Seeder.php',
+
+            /** @var string path view template seeder, support path alias */
+            'templateTableFile' => '@vendor/diecoding/yii2-seeder/src/views/TableSeeder.php'
+        ],
+    ],
 ];
 
 if (YII_ENV_DEV) {

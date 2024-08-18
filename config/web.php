@@ -2,11 +2,14 @@
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
+$urlManager = require __DIR__ . '/_urlManager.php';
 
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
+    'language' => 'ru',
+    'defaultRoute' => 'page/index',
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm'   => '@vendor/npm-asset',
@@ -15,6 +18,7 @@ $config = [
         'request' => [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
             'cookieValidationKey' => 'jReXG1g6TW14Cmvp5HcpMhGYb616UFZA',
+            'baseurl' => '',
         ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
@@ -42,14 +46,24 @@ $config = [
             ],
         ],
         'db' => $db,
-        /*
-        'urlManager' => [
-            'enablePrettyUrl' => true,
-            'showScriptName' => false,
-            'rules' => [
-            ],
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
         ],
-        */
+        'urlManager' => $urlManager,
+        'session' => [
+            'class' => 'yii\web\DbSession',
+            'sessionTable' => 'sessions',
+        ],
+        'formatter' => [
+            'class' => 'yii\i18n\Formatter',
+            'timeZone' => 'Europe/Moscow', // Europe/London
+            'thousandSeparator' => ' ',
+            'decimalSeparator'  => '.',
+
+            'dateFormat'     => 'php:d-m-Y',
+            'datetimeFormat' => 'php:d-m-Y в H:i:s',
+            'timeFormat'     => 'php:H:i:s',
+        ]
     ],
     'params' => $params,
 ];
